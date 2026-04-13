@@ -12,6 +12,13 @@ type Message = {
 
 type Mode = 'copilot' | 'autopilot'
 type SideTab = 'chat' | 'learn'
+type AIProvider = 'claude' | 'openai' | 'gemini'
+
+const PROVIDERS: { id: AIProvider; name: string; placeholder: string; url: string }[] = [
+  { id: 'claude', name: 'Claude', placeholder: 'sk-ant-...', url: 'console.anthropic.com' },
+  { id: 'openai', name: 'ChatGPT', placeholder: 'sk-...', url: 'platform.openai.com' },
+  { id: 'gemini', name: 'Gemini', placeholder: 'AIza...', url: 'aistudio.google.com' },
+]
 
 const STRUDEL_DOCS = [
   { title: 'Getting Started', path: 'https://strudel.cc/learn/getting-started', icon: '🚀' },
@@ -131,9 +138,11 @@ export default function App() {
   const [isPlaying, setIsPlaying] = useState(false)
   const [currentPattern, setCurrentPattern] = useState('')
   const [isLoading, setIsLoading] = useState(false)
-  const [apiKey, setApiKey] = useState('')
+  const [provider, setProvider] = useState<AIProvider>('claude')
+  const [apiKeys, setApiKeys] = useState<Record<AIProvider, string>>({ claude: '', openai: '', gemini: '' })
   const [hasStarted, setHasStarted] = useState(false)
   const [showSettings, setShowSettings] = useState(false)
+  const [settingsProvider, setSettingsProvider] = useState<AIProvider>('claude')
   const [apiKeyInput, setApiKeyInput] = useState('')
   const [isRecording, setIsRecording] = useState(false)
   const [recordingTime, setRecordingTime] = useState(0)
@@ -147,7 +156,9 @@ export default function App() {
   const autopilotTimer = useRef<number | null>(null)
   const recordingInterval = useRef<number | null>(null)
 
+  const apiKey = apiKeys[provider]
   const isAuthenticated = !!apiKey
+  const providerInfo = PROVIDERS.find(p => p.id === provider)!
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -317,7 +328,7 @@ export default function App() {
         evaluatePattern()
         setMessages(prev => [...prev, {
           role: 'assistant',
-          content: message || 'Here\'s a pattern from Cowork Claude:',
+          content: message || 'Here\'s a pattern from Cowork:',
           pattern: code,
         }])
       }
@@ -339,7 +350,7 @@ export default function App() {
     }
   }, [injectPattern, evaluatePattern, stopPlayback])
 
-  // Send message to Claude
+  // Send message to AI provider
   const sendMessage = useCallback(async (userMessage?: string) => {
     const msg = userMessage || input
     if (!msg.trim() && mode === 'copilot') return
@@ -351,13 +362,14 @@ export default function App() {
 
     setIsLoading(true)
     try {
-      const response = await invoke<string>('chat_with_claude', {
+      const response = await invoke<string>('chat_with_ai', {
         message: mode === 'autopilot'
           ? 'Evolve this pattern creatively. Keep the vibe but surprise me. Return ONLY the new pattern code in a code block.'
           : msg,
         currentPattern,
         mode,
         apiKey,
+        provider,
       })
 
       const codeMatch = response.match(/```(?:javascript|js)?\n([\s\S]*?)```/)
@@ -381,7 +393,7 @@ export default function App() {
     } finally {
       setIsLoading(false)
     }
-  }, [input, currentPattern, mode, apiKey, injectPattern, evaluatePattern])
+  }, [input, currentPattern, mode, apiKey, provider, injectPattern, evaluatePattern])
 
   // Autopilot loop
   useEffect(() => {
@@ -410,7 +422,7 @@ export default function App() {
           </button>
 
           <p className="text-xs text-neutral-600">
-            Powered by <span className="text-neutral-400">Strudel</span> and optionally <span className="text-neutral-400">Claude AI</span>
+            Powered by <span className="text-neutral-400">Strudel</span> and optionally <span className="text-neutral-400">AI</span>
           </p>
         </div>
       </div>
@@ -419,24 +431,65 @@ export default function App() {
 
   // ─── Settings overlay ───
   if (showSettings) {
+    const sp = PROVIDERS.find(p => p.id === settingsProvider)!
+    const currentKey = apiKeys[settingsProvider]
     return (
       <div className="h-screen flex items-center justify-center bg-neutral-950">
-        <div className="bg-neutral-900 rounded-xl p-8 max-w-sm w-full mx-4 border border-neutral-800">
+        <div className="bg-neutral-900 rounded-xl p-8 max-w-md w-full mx-4 border border-neutral-800">
           <h2 className="text-xl font-bold mb-1">Settings</h2>
-          <p className="text-neutral-500 text-sm mb-6">Connect Claude AI to generate and evolve patterns</p>
+          <p className="text-neutral-500 text-sm mb-5">Choose your AI provider and add an API key</p>
 
-          <label className="block text-sm text-neutral-400 mb-2">API key</label>
+          {/* Provider tabs */}
+          <div className="flex gap-1 mb-5 bg-neutral-800 rounded-lg p-1">
+            {PROVIDERS.map(p => (
+              <button
+                key={p.id}
+                onClick={() => { setSettingsProvider(p.id); setApiKeyInput(apiKeys[p.id]) }}
+                className={`flex-1 py-2 rounded-md text-sm font-medium transition-colors ${
+                  settingsProvider === p.id
+                    ? 'bg-neutral-700 text-white'
+                    : 'text-neutral-400 hover:text-white'
+                }`}
+              >
+                {p.name}
+                {apiKeys[p.id] && <span className="ml-1 text-green-400">●</span>}
+              </button>
+            ))}
+          </div>
+
+          <label className="block text-sm text-neutral-400 mb-2">{sp.name} API key</label>
           <input
             type="password"
             value={apiKeyInput}
             onChange={e => setApiKeyInput(e.target.value)}
-            placeholder="sk-ant-..."
+            placeholder={sp.placeholder}
             className="w-full bg-neutral-800 border border-neutral-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-amber-500 mb-2"
           />
-          <p className="text-xs text-neutral-500 mb-6">
-            Stored locally, never sent anywhere except Anthropic's API.{' '}
-            <span className="text-amber-500/80">Get one free at console.anthropic.com</span>
+          <p className="text-xs text-neutral-500 mb-5">
+            Stored locally, never shared.{' '}
+            <span className="text-amber-500/80">Get a key at {sp.url}</span>
           </p>
+
+          {/* Active provider selector */}
+          <label className="block text-sm text-neutral-400 mb-2">Active provider</label>
+          <div className="flex gap-1 mb-5 bg-neutral-800 rounded-lg p-1">
+            {PROVIDERS.map(p => (
+              <button
+                key={p.id}
+                onClick={() => setProvider(p.id)}
+                disabled={!apiKeys[p.id]}
+                className={`flex-1 py-2 rounded-md text-xs font-medium transition-colors ${
+                  provider === p.id
+                    ? 'bg-amber-600 text-white'
+                    : apiKeys[p.id]
+                    ? 'text-neutral-400 hover:text-white'
+                    : 'text-neutral-600 cursor-not-allowed'
+                }`}
+              >
+                {p.name}
+              </button>
+            ))}
+          </div>
 
           <div className="flex gap-2">
             <button
@@ -446,20 +499,31 @@ export default function App() {
               Cancel
             </button>
             <button
-              onClick={() => { setApiKey(apiKeyInput); setShowSettings(false) }}
+              onClick={() => {
+                setApiKeys(prev => ({ ...prev, [settingsProvider]: apiKeyInput }))
+                if (!apiKeys[provider] && apiKeyInput.trim()) setProvider(settingsProvider)
+                setShowSettings(false)
+              }}
               disabled={!apiKeyInput.trim()}
               className="flex-1 bg-amber-600 hover:bg-amber-500 disabled:bg-neutral-700 disabled:text-neutral-500 text-white font-medium py-3 rounded-lg transition-colors text-sm"
             >
-              {isAuthenticated ? 'Update key' : 'Connect'}
+              {currentKey ? 'Update key' : 'Connect'}
             </button>
           </div>
 
-          {isAuthenticated && (
+          {currentKey && (
             <button
-              onClick={() => { setApiKey(''); setApiKeyInput(''); setShowSettings(false) }}
+              onClick={() => {
+                setApiKeys(prev => ({ ...prev, [settingsProvider]: '' }))
+                setApiKeyInput('')
+                if (provider === settingsProvider) {
+                  const alt = PROVIDERS.find(p => p.id !== settingsProvider && apiKeys[p.id])
+                  if (alt) setProvider(alt.id)
+                }
+              }}
               className="w-full mt-3 py-2 text-sm text-red-400/60 hover:text-red-400 transition-colors"
             >
-              Disconnect Claude
+              Disconnect {sp.name}
             </button>
           )}
         </div>
@@ -506,7 +570,7 @@ export default function App() {
               Learn Strudel
             </button>
             <button
-              onClick={() => { setApiKeyInput(apiKey); setShowSettings(true) }}
+              onClick={() => { setSettingsProvider(provider); setApiKeyInput(apiKeys[provider]); setShowSettings(true) }}
               className="p-2 text-neutral-600 hover:text-white transition-colors"
               title="Settings"
             >
@@ -565,10 +629,10 @@ export default function App() {
 
                     <div className="border border-neutral-800 rounded-lg p-4 text-center">
                       <p className="text-xs text-neutral-400 mb-3">
-                        Connect Claude AI to generate patterns, get suggestions, and let AI jam with you
+                        Connect an AI ({providerInfo.name}) to generate patterns, get suggestions, and let AI jam with you
                       </p>
                       <button
-                        onClick={() => { setApiKeyInput(apiKey); setShowSettings(true) }}
+                        onClick={() => { setSettingsProvider(provider); setApiKeyInput(apiKeys[provider]); setShowSettings(true) }}
                         className="bg-amber-600/90 hover:bg-amber-500 text-white text-xs font-medium px-4 py-2 rounded-lg transition-colors"
                       >
                         Add API key
@@ -594,7 +658,7 @@ export default function App() {
                     ) : (
                       <>
                         <p className="text-sm text-neutral-300 mb-1">Autopilot mode</p>
-                        <p className="text-xs">Hit start and Claude will create and evolve patterns on its own, every 15 seconds.</p>
+                        <p className="text-xs">Hit start and {providerInfo.name} will create and evolve patterns on its own, every 15 seconds.</p>
                       </>
                     )}
                   </div>
@@ -882,7 +946,7 @@ export default function App() {
         <span className={`text-xs ${isPlaying ? 'text-green-500' : 'text-neutral-600'}`}>
           {isPlaying ? '▶ Playing' : '■ Stopped'}
         </span>
-        {isAuthenticated && <span className="text-xs text-neutral-600">Claude: {mode}</span>}
+        {isAuthenticated && <span className="text-xs text-neutral-600">{providerInfo.name}: {mode}</span>}
 
         {/* Learn button */}
         <button

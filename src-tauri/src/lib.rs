@@ -1,6 +1,8 @@
 use serde::{Deserialize, Serialize};
 use tauri::Emitter;
 
+// ─── Claude (Anthropic) types ───
+
 #[derive(Serialize, Deserialize)]
 struct ClaudeMessage {
     role: String,
@@ -31,6 +33,83 @@ struct ClaudeError {
     message: String,
 }
 
+// ─── OpenAI types ───
+
+#[derive(Serialize)]
+struct OpenAIMessage {
+    role: String,
+    content: String,
+}
+
+#[derive(Serialize)]
+struct OpenAIRequest {
+    model: String,
+    max_tokens: u32,
+    messages: Vec<OpenAIMessage>,
+}
+
+#[derive(Deserialize)]
+struct OpenAIChoice {
+    message: Option<OpenAIChoiceMessage>,
+}
+
+#[derive(Deserialize)]
+struct OpenAIChoiceMessage {
+    content: Option<String>,
+}
+
+#[derive(Deserialize)]
+struct OpenAIResponse {
+    choices: Option<Vec<OpenAIChoice>>,
+    error: Option<OpenAIError>,
+}
+
+#[derive(Deserialize)]
+struct OpenAIError {
+    message: String,
+}
+
+// ─── Gemini types ───
+
+#[derive(Serialize)]
+struct GeminiContent {
+    role: String,
+    parts: Vec<GeminiPart>,
+}
+
+#[derive(Serialize, Deserialize)]
+struct GeminiPart {
+    text: String,
+}
+
+#[derive(Serialize)]
+struct GeminiRequest {
+    contents: Vec<GeminiContent>,
+    #[serde(rename = "systemInstruction")]
+    system_instruction: Option<GeminiContent>,
+}
+
+#[derive(Deserialize)]
+struct GeminiCandidate {
+    content: Option<GeminiCandidateContent>,
+}
+
+#[derive(Deserialize)]
+struct GeminiCandidateContent {
+    parts: Option<Vec<GeminiPart>>,
+}
+
+#[derive(Deserialize)]
+struct GeminiResponse {
+    candidates: Option<Vec<GeminiCandidate>>,
+    error: Option<GeminiError>,
+}
+
+#[derive(Deserialize)]
+struct GeminiError {
+    message: String,
+}
+
 const SYSTEM_PROMPT: &str = r#"You are a creative live coding musician using Strudel (strudel.cc), a JavaScript-based live coding environment for music.
 
 Your job is to write Strudel patterns that make interesting, evolving, musically engaging sounds. You understand music theory deeply and can create patterns in any genre.
@@ -47,12 +126,177 @@ RULES:
 9. Give a brief 1-2 sentence description of what you created/changed before the code block
 10. Be creative and musical. Think about tension, release, dynamics, and groove."#;
 
+// ─── Provider-specific API calls ───
+
+async fn call_claude(api_key: &str, system: &str, user_content: &str) -> Result<String, String> {
+    let request = ClaudeRequest {
+        model: "claude-sonnet-4-20250514".to_string(),
+        max_tokens: 2048,
+        system: system.to_string(),
+        messages: vec![ClaudeMessage {
+            role: "user".to_string(),
+            content: user_content.to_string(),
+        }],
+    };
+
+    let client = reqwest::Client::new();
+    let response = client
+        .post("https://api.anthropic.com/v1/messages")
+        .header("x-api-key", api_key)
+        .header("anthropic-version", "2023-06-01")
+        .header("content-type", "application/json")
+        .json(&request)
+        .send()
+        .await
+        .map_err(|e| format!("Request failed: {}", e))?;
+
+    let status = response.status();
+    let body = response
+        .text()
+        .await
+        .map_err(|e| format!("Failed to read response: {}", e))?;
+
+    if !status.is_success() {
+        return Err(format!("Claude API error ({}): {}", status, body));
+    }
+
+    let claude_response: ClaudeResponse =
+        serde_json::from_str(&body).map_err(|e| format!("Failed to parse response: {}", e))?;
+
+    if let Some(error) = claude_response.error {
+        return Err(format!("Claude error: {}", error.message));
+    }
+
+    claude_response
+        .content
+        .and_then(|blocks| {
+            blocks
+                .into_iter()
+                .filter_map(|b| b.text)
+                .collect::<Vec<_>>()
+                .first()
+                .cloned()
+        })
+        .ok_or_else(|| "No response from Claude".to_string())
+}
+
+async fn call_openai(api_key: &str, system: &str, user_content: &str) -> Result<String, String> {
+    let request = OpenAIRequest {
+        model: "gpt-4o".to_string(),
+        max_tokens: 2048,
+        messages: vec![
+            OpenAIMessage {
+                role: "system".to_string(),
+                content: system.to_string(),
+            },
+            OpenAIMessage {
+                role: "user".to_string(),
+                content: user_content.to_string(),
+            },
+        ],
+    };
+
+    let client = reqwest::Client::new();
+    let response = client
+        .post("https://api.openai.com/v1/chat/completions")
+        .header("Authorization", format!("Bearer {}", api_key))
+        .header("content-type", "application/json")
+        .json(&request)
+        .send()
+        .await
+        .map_err(|e| format!("Request failed: {}", e))?;
+
+    let status = response.status();
+    let body = response
+        .text()
+        .await
+        .map_err(|e| format!("Failed to read response: {}", e))?;
+
+    if !status.is_success() {
+        return Err(format!("OpenAI API error ({}): {}", status, body));
+    }
+
+    let openai_response: OpenAIResponse =
+        serde_json::from_str(&body).map_err(|e| format!("Failed to parse response: {}", e))?;
+
+    if let Some(error) = openai_response.error {
+        return Err(format!("OpenAI error: {}", error.message));
+    }
+
+    openai_response
+        .choices
+        .and_then(|choices| choices.into_iter().next())
+        .and_then(|choice| choice.message)
+        .and_then(|msg| msg.content)
+        .ok_or_else(|| "No response from OpenAI".to_string())
+}
+
+async fn call_gemini(api_key: &str, system: &str, user_content: &str) -> Result<String, String> {
+    let request = GeminiRequest {
+        contents: vec![GeminiContent {
+            role: "user".to_string(),
+            parts: vec![GeminiPart {
+                text: user_content.to_string(),
+            }],
+        }],
+        system_instruction: Some(GeminiContent {
+            role: "user".to_string(),
+            parts: vec![GeminiPart {
+                text: system.to_string(),
+            }],
+        }),
+    };
+
+    let url = format!(
+        "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={}",
+        api_key
+    );
+
+    let client = reqwest::Client::new();
+    let response = client
+        .post(&url)
+        .header("content-type", "application/json")
+        .json(&request)
+        .send()
+        .await
+        .map_err(|e| format!("Request failed: {}", e))?;
+
+    let status = response.status();
+    let body = response
+        .text()
+        .await
+        .map_err(|e| format!("Failed to read response: {}", e))?;
+
+    if !status.is_success() {
+        return Err(format!("Gemini API error ({}): {}", status, body));
+    }
+
+    let gemini_response: GeminiResponse =
+        serde_json::from_str(&body).map_err(|e| format!("Failed to parse response: {}", e))?;
+
+    if let Some(error) = gemini_response.error {
+        return Err(format!("Gemini error: {}", error.message));
+    }
+
+    gemini_response
+        .candidates
+        .and_then(|candidates| candidates.into_iter().next())
+        .and_then(|candidate| candidate.content)
+        .and_then(|content| content.parts)
+        .and_then(|parts| parts.into_iter().next())
+        .map(|part| part.text)
+        .ok_or_else(|| "No response from Gemini".to_string())
+}
+
+// ─── Main Tauri command ───
+
 #[tauri::command]
-async fn chat_with_claude(
+async fn chat_with_ai(
     message: String,
     current_pattern: String,
     mode: String,
     api_key: String,
+    provider: String,
 ) -> Result<String, String> {
     if api_key.is_empty() {
         return Err("No API key provided. Add one in Settings.".to_string());
@@ -78,57 +322,22 @@ async fn chat_with_claude(
         SYSTEM_PROMPT.to_string()
     };
 
-    let request = ClaudeRequest {
-        model: "claude-sonnet-4-20250514".to_string(),
-        max_tokens: 2048,
-        system,
-        messages: vec![ClaudeMessage {
-            role: "user".to_string(),
-            content: user_content,
-        }],
-    };
-
-    let client = reqwest::Client::new();
-    let response = client
-        .post("https://api.anthropic.com/v1/messages")
-        .header("x-api-key", &api_key)
-        .header("anthropic-version", "2023-06-01")
-        .header("content-type", "application/json")
-        .json(&request)
-        .send()
-        .await
-        .map_err(|e| format!("Request failed: {}", e))?;
-
-    let status = response.status();
-    let body = response
-        .text()
-        .await
-        .map_err(|e| format!("Failed to read response: {}", e))?;
-
-    if !status.is_success() {
-        return Err(format!("API error ({}): {}", status, body));
+    match provider.as_str() {
+        "openai" => call_openai(&api_key, &system, &user_content).await,
+        "gemini" => call_gemini(&api_key, &system, &user_content).await,
+        _ => call_claude(&api_key, &system, &user_content).await, // default to Claude
     }
+}
 
-    let claude_response: ClaudeResponse =
-        serde_json::from_str(&body).map_err(|e| format!("Failed to parse response: {}", e))?;
-
-    if let Some(error) = claude_response.error {
-        return Err(format!("Claude error: {}", error.message));
-    }
-
-    let text = claude_response
-        .content
-        .and_then(|blocks| {
-            blocks
-                .into_iter()
-                .filter_map(|b| b.text)
-                .collect::<Vec<_>>()
-                .first()
-                .cloned()
-        })
-        .unwrap_or_else(|| "No response from Claude".to_string());
-
-    Ok(text)
+/// Backwards-compatible wrapper
+#[tauri::command]
+async fn chat_with_claude(
+    message: String,
+    current_pattern: String,
+    mode: String,
+    api_key: String,
+) -> Result<String, String> {
+    chat_with_ai(message, current_pattern, mode, api_key, "claude".to_string()).await
 }
 
 /// Payload sent to the frontend via Tauri events
@@ -227,7 +436,7 @@ pub fn run() {
         .plugin(tauri_plugin_log::Builder::default().build())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
-        .invoke_handler(tauri::generate_handler![chat_with_claude])
+        .invoke_handler(tauri::generate_handler![chat_with_claude, chat_with_ai])
         .setup(|app| {
             start_cowork_server(app.handle().clone());
             Ok(())
