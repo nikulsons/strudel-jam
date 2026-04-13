@@ -32,6 +32,9 @@ jobs:
           mkdir -p public/strudel
           cp -r ../strudel/website/dist/* public/strudel/
 
+      - name: Patch Strudel with bridge script and custom CSS
+        run: bash scripts/patch-strudel.sh public/strudel/index.html
+
       - name: Upload Strudel build
         uses: actions/upload-artifact@v4
         with:
@@ -99,9 +102,12 @@ jobs:
           releaseBody: |
             Download the installer for your platform below.
 
-            **macOS**: Use the `.dmg` file. You may need to right-click and select "Open" the first time due to Gatekeeper.
-            **Windows**: Use the `-setup.exe` installer.
-            **Linux**: Use `.deb` for Debian/Ubuntu or `.AppImage` for other distros.
-          releaseDraft: true
+            **macOS (Apple Silicon)**: `Strudel Jam_*_aarch64.dmg`
+            **macOS (Intel)**: `Strudel Jam_*_x64.dmg`
+            **Windows**: `Strudel Jam_*_x64-setup.exe`
+            **Linux**: `.deb` for Debian/Ubuntu, `.AppImage` for other distros
+
+            You may need to right-click and select "Open" on macOS due to Gatekeeper.
+          releaseDraft: false
           prerelease: false
           args: ${{ matrix.args }}
