@@ -121,6 +121,9 @@ const SLASH_COMMANDS: SlashCommand[] = [
 // Prevent infinite recursion if our app loads inside its own iframe
 const isEmbedded = window.self !== window.top
 
+// Cache-bust the Strudel iframe src once per app load (not per render)
+const strudelSrc = `/strudel/?v=${Date.now()}`
+
 function EmbedGuard() {
   return (
     <div className="h-screen flex items-center justify-center bg-neutral-950 text-neutral-500 text-sm">
@@ -279,6 +282,8 @@ export default function App() {
           type: 'strudel-jam:inject-css',
           css: `
             .cm-editor .cm-content, .cm-editor .cm-gutters { font-size: 13px !important; line-height: 1.5 !important; }
+            #header { position: absolute !important; top: -9999px !important; left: -9999px !important; height: 0 !important; overflow: hidden !important; }
+            button.fixed.text-2xl[class*="z-[1000]"] { display: none !important; }
           `
         }, '*')
         iframeRef.current?.contentWindow?.postMessage({ type: 'strudel-jam:toggle-toolbar', visible: false }, '*')
@@ -539,7 +544,7 @@ export default function App() {
         <div className="flex-1 min-w-0">
           <iframe
             ref={iframeRef}
-            src="/strudel/"
+            src={strudelSrc}
             className="w-full h-full border-none"
             allow="autoplay; midi; microphone"
           />
@@ -629,7 +634,7 @@ export default function App() {
 
                     <div className="border border-neutral-800 rounded-lg p-4 text-center">
                       <p className="text-xs text-neutral-400 mb-3">
-                        Connect an AI ({providerInfo.name}) to generate patterns, get suggestions, and let AI jam with you
+                        Connect AI (Claude, ChatGPT, or Gemini) to generate patterns, get suggestions, and let AI jam with you
                       </p>
                       <button
                         onClick={() => { setSettingsProvider(provider); setApiKeyInput(apiKeys[provider]); setShowSettings(true) }}
@@ -797,11 +802,33 @@ export default function App() {
                   </span>
                 </div>
                 <div className="flex-1 relative overflow-hidden">
-                  <iframe
-                    src={docsPath}
-                    className="absolute inset-0 border-none bg-neutral-950"
-                    style={{ width: '125%', height: '125%', transform: 'scale(0.8)', transformOrigin: 'top left' }}
-                  />
+                  {!navigator.onLine ? (
+                    <div className="flex flex-col items-center justify-center h-full text-center px-6 gap-3">
+                      <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-neutral-600">
+                        <line x1="1" y1="1" x2="23" y2="23"/><path d="M16.72 11.06A10.94 10.94 0 0 1 19 12.55"/><path d="M5 12.55a10.94 10.94 0 0 1 5.17-2.39"/><path d="M10.71 5.05A16 16 0 0 1 22.56 9"/><path d="M1.42 9a15.91 15.91 0 0 1 4.7-2.88"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><line x1="12" y1="20" x2="12.01" y2="20"/>
+                      </svg>
+                      <p className="text-xs text-neutral-500">You're offline. Docs require an internet connection.</p>
+                      <button
+                        onClick={() => setDocsPath(null)}
+                        className="text-xs text-amber-500 hover:text-amber-400 transition-colors"
+                      >
+                        ← Back to Learn
+                      </button>
+                    </div>
+                  ) : (
+                    <iframe
+                      src={docsPath}
+                      className="absolute border-none bg-neutral-950"
+                      style={{
+                        width: '125%',
+                        height: 'calc(125% + 80px)',
+                        transform: 'scale(0.8)',
+                        transformOrigin: 'top left',
+                        top: '-52px',
+                        left: 0,
+                      }}
+                    />
+                  )}
                 </div>
               </div>
             ) : (
@@ -916,6 +943,19 @@ export default function App() {
             </>
           )}
         </button>
+
+        {/* Update (re-evaluate) - shown while playing */}
+        {isPlaying && (
+          <button
+            onClick={evaluatePattern}
+            className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors bg-amber-600/20 hover:bg-amber-600/40 text-amber-400 border border-amber-600/30"
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
+            </svg>
+            Update
+          </button>
+        )}
 
         {/* Record */}
         <button
