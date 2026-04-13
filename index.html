@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Strudel Jam</title>
+</head>
+<body class="m-0 overflow-hidden bg-neutral-950 text-white">
+  <div id="root"></div>
+  <script>
+    // Polyfill React Fast Refresh globals for Tauri's WKWebView
+    // The Vite preamble that defines these sometimes fails to run first
+    if (!window.$RefreshReg$) window.$RefreshReg$ = function() {};
+    if (!window.$RefreshSig$) window.$RefreshSig$ = function() { return function(type) { return type; }; };
+
+    window.onerror = function(msg, url, line, col, err) {
+      document.getElementById('root').innerHTML = '<pre style="color:red;padding:20px;font-size:14px;">JS Error: ' + msg + '\n' + url + ':' + line + '\n' + (err && err.stack || '') + '</pre>';
+    };
+    window.addEventListener('unhandledrejection', function(e) {
+      document.getElementById('root').innerHTML = '<pre style="color:red;padding:20px;font-size:14px;">Promise Error: ' + (e.reason && e.reason.stack || e.reason) + '</pre>';
+    });
+  </script>
+  <script type="module" src="/src/main.tsx"></script>
+</body>
+</html>

@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: transparent;
+    font-family: 'JetBrains Mono', 'SF Mono', 'Fira Code', monospace;
+    color: #e0e0e0;
+    overflow: hidden;
+  }
+
+  .container {
+    position: fixed;
+    bottom: 24px;
+    left: 24px;
+    right: 24px;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    pointer-events: none;
+  }
+
+  .left {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .title {
+    font-size: 28px;
+    font-weight: 700;
+    color: #fff;
+    text-shadow: 0 0 20px rgba(100,180,255,0.4), 0 2px 8px rgba(0,0,0,0.8);
+    letter-spacing: 2px;
+  }
+
+  .title span {
+    color: #64b4ff;
+  }
+
+  .subtitle {
+    font-size: 13px;
+    color: #999;
+    text-shadow: 0 1px 4px rgba(0,0,0,0.8);
+    letter-spacing: 1px;
+  }
+
+  .now-playing {
+    margin-top: 4px;
+    padding: 8px 14px;
+    background: rgba(0,0,0,0.6);
+    backdrop-filter: blur(8px);
+    border-left: 3px solid #64b4ff;
+    border-radius: 0 6px 6px 0;
+    font-size: 14px;
+    color: #c0c0c0;
+    max-width: 500px;
+    transition: opacity 0.8s ease;
+  }
+
+  .now-playing .label {
+    font-size: 10px;
+    color: #666;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    margin-bottom: 2px;
+  }
+
+  .right {
+    text-align: right;
+  }
+
+  .badge {
+    display: inline-block;
+    padding: 6px 12px;
+    background: rgba(0,0,0,0.5);
+    backdrop-filter: blur(8px);
+    border-radius: 20px;
+    font-size: 11px;
+    color: #888;
+    text-shadow: 0 1px 3px rgba(0,0,0,0.6);
+    letter-spacing: 1px;
+  }
+
+  .badge .dot {
+    display: inline-block;
+    width: 6px;
+    height: 6px;
+    background: #ff4444;
+    border-radius: 50%;
+    margin-right: 6px;
+    animation: pulse 2s ease-in-out infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+  }
+
+  /* Top bar */
+  .top-bar {
+    position: fixed;
+    top: 24px;
+    right: 24px;
+    pointer-events: none;
+  }
+
+  .clock {
+    font-size: 14px;
+    color: #666;
+    text-shadow: 0 1px 4px rgba(0,0,0,0.8);
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Visualizer dots */
+  .viz {
+    position: fixed;
+    top: 24px;
+    left: 24px;
+    display: flex;
+    gap: 3px;
+    align-items: flex-end;
+    height: 30px;
+    pointer-events: none;
+  }
+
+  .viz-bar {
+    width: 3px;
+    background: #64b4ff;
+    border-radius: 2px;
+    opacity: 0.5;
+    animation: vizPulse var(--dur) ease-in-out infinite;
+    animation-delay: var(--delay);
+  }
+
+  @keyframes vizPulse {
+    0%, 100% { height: 4px; opacity: 0.3; }
+    50% { height: var(--max-h); opacity: 0.7; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Fake visualizer bars -->
+<div class="viz" id="viz"></div>
+
+<!-- Clock -->
+<div class="top-bar">
+  <div class="clock" id="clock"></div>
+</div>
+
+<!-- Bottom overlay -->
+<div class="container">
+  <div class="left">
+    <div class="title">STRUDEL <span>JAM</span></div>
+    <div class="subtitle">AI-generated live coding music by Claude</div>
+    <div class="now-playing" id="nowPlaying">
+      <div class="label">now playing</div>
+      <div id="trackName">Initializing...</div>
+    </div>
+  </div>
+  <div class="right">
+    <div class="badge">
+      <span class="dot"></span>
+      LIVE &middot; strudel.cc &middot; open source
+    </div>
+  </div>
+</div>
+
+<script>
+  // Clock
+  function updateClock() {
+    const now = new Date();
+    const h = String(now.getHours()).padStart(2, '0');
+    const m = String(now.getMinutes()).padStart(2, '0');
+    const s = String(now.getSeconds()).padStart(2, '0');
+    document.getElementById('clock').textContent = `${h}:${m}:${s}`;
+  }
+  setInterval(updateClock, 1000);
+  updateClock();
+
+  // Visualizer bars
+  const viz = document.getElementById('viz');
+  for (let i = 0; i < 16; i++) {
+    const bar = document.createElement('div');
+    bar.className = 'viz-bar';
+    bar.style.setProperty('--dur', (1.5 + Math.random() * 2) + 's');
+    bar.style.setProperty('--delay', (Math.random() * 2) + 's');
+    bar.style.setProperty('--max-h', (8 + Math.random() * 22) + 'px');
+    viz.appendChild(bar);
+  }
+
+  // Poll the app for current track name
+  // The DJ script sends messages with each pattern
+  async function pollTrack() {
+    try {
+      const res = await fetch('http://127.0.0.1:17643/health');
+      const data = await res.json();
+      if (data.message) {
+        document.getElementById('trackName').textContent = data.message;
+      }
+    } catch(e) {}
+  }
+  setInterval(pollTrack, 3000);
+  pollTrack();
+</script>
+</body>
+</html>
