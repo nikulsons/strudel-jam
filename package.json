@@ -1,7 +1,7 @@
 {
   "name": "strudel-jam",
   "version": "0.1.0",
-  "description": "Desktop app for live coding music with Strudel, optionally powered by Claude AI",
+  "description": "Desktop app for live coding music with Strudel, optionally powered by Claude, ChatGPT, or Gemini",
   "homepage": "https://github.com/niculsons/strudel-jam",
   "repository": {
     "type": "git",

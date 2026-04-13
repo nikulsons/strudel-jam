@@ -1,7 +1,7 @@
 [package]
 name = "strudel-jam"
 version = "0.1.0"
-description = "AI-powered live coding with Strudel"
+description = "Desktop app for live coding music with Strudel, powered by Claude, ChatGPT, or Gemini"
 authors = ["Strudel Jam Contributors"]
 license = "MIT"
 edition = "2021"

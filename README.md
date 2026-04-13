@@ -1,8 +1,8 @@
 # Strudel Jam
 
-A desktop app for live coding music with [Strudel](https://strudel.cc), optionally powered by Claude AI.
+A desktop app for live coding music with [Strudel](https://strudel.cc), optionally powered by AI (Claude, ChatGPT, or Gemini).
 
-Write patterns by hand, ask AI to generate them, or let autopilot evolve your music in real time. Record to WAV. Stream to YouTube. Ship your own sounds.
+Write patterns by hand, ask AI to generate them, or let autopilot evolve your music in real time. Record to WAV. Ship your own sounds.
 
 ![License](https://img.shields.io/badge/license-MIT-blue)
 ![Tauri](https://img.shields.io/badge/tauri-v2-orange)
@@ -12,24 +12,23 @@ Write patterns by hand, ask AI to generate them, or let autopilot evolve your mu
 
 ## What it does
 
-Strudel Jam embeds the full Strudel REPL inside a native desktop window and adds a side panel where you can chat with Claude AI about your music.
+Strudel Jam embeds the full Strudel REPL inside a native desktop window and adds a side panel where you can chat with AI about your music. Choose your provider: Claude, ChatGPT (OpenAI), or Gemini (Google).
 
-**Co-pilot mode** - describe what you want ("dark ambient in F minor", "add a walking bass", "make it more glitchy") and Claude writes the Strudel code, injects it, and plays it.
+**Co-pilot mode** - describe what you want ("dark ambient in F minor", "add a walking bass", "make it more glitchy") and the AI writes the Strudel code, injects it, and plays it.
 
-**Autopilot mode** - hit start and Claude creates patterns on its own, evolving the music every 15 seconds.
+**Autopilot mode** - hit start and the AI creates patterns on its own, evolving the music every 15 seconds.
 
-**No AI required** - the Strudel REPL works standalone. Use the built-in pattern tips, slash commands, and learning hints to get started without an API key.
+**No AI required** - the Strudel REPL works standalone. Use the built-in pattern tips, slash commands, and learning panel to get started without an API key.
 
 ### Features
 
 - Full Strudel REPL with all samples and synths
-- AI chat panel with co-pilot and autopilot modes
+- AI chat panel with co-pilot and autopilot modes (Claude, ChatGPT, or Gemini)
 - Slash commands: `/play`, `/stop`, `/record`, `/random`, `/help`, `/clear`
 - WAV recording with save dialog
 - Transport bar with prominent play/stop/record controls
-- Quick reference panel for Strudel mini-notation
+- Learn panel with Strudel quick reference and embedded docs
 - Local HTTP server (port 17643) for external control via curl
-- YouTube livestream support with OBS overlay
 - 15 bundled pattern presets (ambient, DnB, metalcore, odd meters, generative)
 
 ## Download
@@ -92,10 +91,14 @@ The release binary lands in `src-tauri/target/release/bundle/`.
 ## Using the AI features
 
 1. Open the app and click the gear icon in the side panel
-2. Enter your [Anthropic API key](https://console.anthropic.com/)
-3. Your key stays local, stored only in the app's memory for the session
+2. Pick a provider (Claude, ChatGPT, or Gemini) and enter your API key
+   - [Anthropic](https://console.anthropic.com/) for Claude
+   - [OpenAI](https://platform.openai.com/) for ChatGPT
+   - [Google AI Studio](https://aistudio.google.com/) for Gemini
+3. Your keys stay local, stored only in the app's memory for the session
+4. You can add keys for multiple providers and switch between them
 
-In co-pilot mode, type what you want and Claude writes Strudel code. In autopilot mode, Claude generates and evolves patterns autonomously.
+In co-pilot mode, type what you want and the AI writes Strudel code. In autopilot mode, the AI generates and evolves patterns autonomously.
 
 ## Slash commands
 
@@ -130,24 +133,6 @@ curl -X POST http://127.0.0.1:17643/stop
 curl -X POST http://127.0.0.1:17643/message \
   -H "Content-Type: application/json" \
   -d '{"message": "make it more ambient"}'
-```
-
-## YouTube livestream setup
-
-The repo includes tools for streaming Strudel Jam to YouTube:
-
-1. **`livestream-dj.sh`** - A bash script that sends patterns to the app via curl on a timed loop. Cycles through 15 sections (ambient, groove, heavy) in ~55 minute rotations, forever.
-
-2. **`stream-overlay.html`** - An OBS browser source overlay showing the current track name, a live indicator, clock, and animated visualizer bars. Transparent background, polls the health endpoint for track info.
-
-### Quick start
-
-```bash
-# 1. Open Strudel Jam
-# 2. In OBS, add a Window Capture for Strudel Jam
-# 3. Add a Browser Source pointing to stream-overlay.html
-# 4. Start the DJ script:
-./livestream-dj.sh
 ```
 
 ## Bundled patterns
@@ -185,7 +170,7 @@ curl -X POST http://127.0.0.1:17643/pattern \
 Strudel Jam is a Tauri v2 app with:
 
 - **Frontend**: React + TypeScript + Tailwind CSS, with Strudel REPL in an iframe
-- **Backend**: Rust (Tauri), handles Claude API calls and runs the local HTTP server
+- **Backend**: Rust (Tauri), handles AI API calls (Claude/OpenAI/Gemini) and runs the local HTTP server
 - **Communication**: `postMessage` between React and the Strudel iframe; Tauri events between Rust and React
 
 See [ARCHITECTURE.md](ARCHITECTURE.md) for the full technical breakdown.
@@ -202,4 +187,4 @@ MIT. See [LICENSE](LICENSE).
 
 - [Strudel](https://strudel.cc) by Alex McLean and contributors - the live coding environment
 - [Tauri](https://tauri.app) - the desktop framework
-- [Claude](https://anthropic.com) by Anthropic - the AI (optional)
+- [Claude](https://anthropic.com) by Anthropic, [ChatGPT](https://openai.com) by OpenAI, [Gemini](https://ai.google.dev) by Google - AI providers (optional)
