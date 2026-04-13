@@ -11,6 +11,30 @@ type Message = {
 }
 
 type Mode = 'copilot' | 'autopilot'
+type SideTab = 'chat' | 'learn'
+
+const STRUDEL_DOCS = [
+  { title: 'Getting Started', path: 'https://strudel.cc/learn/getting-started', icon: '🚀' },
+  { title: 'Sounds & Samples', path: 'https://strudel.cc/learn/sounds', icon: '🔊' },
+  { title: 'Notes & Synths', path: 'https://strudel.cc/learn/notes', icon: '🎹' },
+  { title: 'Mini Notation', path: 'https://strudel.cc/learn/mini-notation', icon: '✏️' },
+  { title: 'Effects', path: 'https://strudel.cc/learn/effects', icon: '🌀' },
+  { title: 'Time Modifiers', path: 'https://strudel.cc/learn/time-modifiers', icon: '⏱' },
+  { title: 'Pattern Factories', path: 'https://strudel.cc/learn/factories', icon: '🏭' },
+  { title: 'Signals & LFOs', path: 'https://strudel.cc/learn/signals', icon: '📈' },
+  { title: 'Randomness', path: 'https://strudel.cc/learn/random-modifiers', icon: '🎲' },
+  { title: 'Conditional Modifiers', path: 'https://strudel.cc/learn/conditional-modifiers', icon: '❓' },
+  { title: 'Tonal & Scales', path: 'https://strudel.cc/learn/tonal', icon: '🎵' },
+  { title: 'Samples & Loading', path: 'https://strudel.cc/learn/samples', icon: '📂' },
+  { title: 'Visual Feedback', path: 'https://strudel.cc/learn/visual-feedback', icon: '👁' },
+  { title: 'MIDI & OSC', path: 'https://strudel.cc/learn/input-output', icon: '🔌' },
+  { title: 'JavaScript in Strudel', path: 'https://strudel.cc/learn/code', icon: '💻' },
+  { title: 'Synth Design', path: 'https://strudel.cc/learn/synths', icon: '🎛' },
+  { title: 'Workshop: First Sounds', path: 'https://strudel.cc/workshop/first-sounds', icon: '📖' },
+  { title: 'Workshop: First Notes', path: 'https://strudel.cc/workshop/first-notes', icon: '📖' },
+  { title: 'Workshop: First Effects', path: 'https://strudel.cc/workshop/first-effects', icon: '📖' },
+  { title: 'Workshop: Pattern Effects', path: 'https://strudel.cc/workshop/pattern-effects', icon: '📖' },
+]
 
 const STRUDEL_TIPS = [
   { label: 'Kick pattern', code: 'sound("bd sd:2 bd bd sd:4").bank("RolandTR909")' },
@@ -20,12 +44,48 @@ const STRUDEL_TIPS = [
 ]
 
 const STRUDEL_LEARN = [
-  { title: 'Mini notation', hint: 'Use [ ] for grouping, * for repeat, < > for alternating each cycle. Example: "bd [sd sd] hh*4 <cp oh>"' },
-  { title: 'Sounds', hint: 'sound("bd sd hh") plays samples. Add .bank("RolandTR909") for drum machines, or use note("c3").sound("sawtooth") for synths.' },
-  { title: 'Effects', hint: '.room(0.5) = reverb, .delay(0.3) = echo, .lpf(2000) = low-pass filter, .gain(0.5) = volume, .speed(2) = pitch up.' },
-  { title: 'Patterns', hint: '.slow(2) = half speed, .fast(2) = double, .rev = reverse, .jux(rev) = stereo reverse, .every(4, fast(2)) = every 4th cycle go fast.' },
-  { title: 'Stack & Layer', hint: 'stack(sound("bd sd"), note("c3 e3").sound("sine")) plays two patterns simultaneously.' },
-  { title: 'Generative', hint: 'perlin.range(200,2000) = smooth random, .degradeBy(0.3) = randomly drop 30% of notes, .sometimes(rev) = sometimes reverse.' },
+  {
+    title: 'Mini notation',
+    summary: '[ ] group, * repeat, < > alternate',
+    detail: '[ ] groups events into one step. * repeats (hh*4 = four hihats). < > picks one per cycle. / slows down, ! replicates, ? randomly drops.',
+    example: 'sound("bd [sd sd] hh*4 <cp oh>").bank("RolandTR909")',
+    doc: 'https://strudel.cc/learn/mini-notation',
+  },
+  {
+    title: 'Sounds',
+    summary: 'sound() for samples, note().sound() for synths',
+    detail: 'sound("bd sd hh") plays samples from the default bank. .bank("RolandTR909") switches drum machines. For synths use note("c3").sound("sawtooth") with waveforms: sine, triangle, square, sawtooth.',
+    example: 'note("c3 eb3 g3 bb3").sound("sawtooth").cutoff(1000).gain(0.4)',
+    doc: 'https://strudel.cc/learn/sounds',
+  },
+  {
+    title: 'Effects',
+    summary: 'room, delay, lpf, gain, speed',
+    detail: '.room(0.5) adds reverb. .delay(0.3) adds echo. .lpf(2000) is a low-pass filter (also .hpf, .bpf). .cutoff() and .resonance() for classic filter sweeps. .gain() controls volume. .speed() changes pitch. .pan() for stereo.',
+    example: 'note("<c3 eb3 g3 bb3>").sound("sawtooth").lpf(sine.range(200,2000).slow(4)).room(0.5).delay(0.25).gain(0.3)',
+    doc: 'https://strudel.cc/learn/effects',
+  },
+  {
+    title: 'Patterns',
+    summary: 'slow, fast, rev, jux, every',
+    detail: '.slow(2) halves speed, .fast(2) doubles it. .rev reverses. .jux(rev) plays reversed in one ear. .every(4, fast(2)) applies fast(2) every 4th cycle. .off(0.125, add(note(7))) creates a canon.',
+    example: 'sound("bd sd:2 [~ bd] sd").bank("RolandTR909").every(4, fast(2)).jux(rev)',
+    doc: 'https://strudel.cc/learn/time-modifiers',
+  },
+  {
+    title: 'Stack & Layer',
+    summary: 'stack() plays patterns simultaneously',
+    detail: 'stack() combines any number of patterns playing at the same time. Each pattern in the stack is independent. Use cat() to play patterns one after another instead.',
+    example: 'stack(\n  sound("bd ~ [~ bd] ~").bank("RolandTR909"),\n  sound("~ ~ sd ~").bank("RolandTR909"),\n  note("c2 ~ eb2 ~").sound("sawtooth").lpf(500).gain(0.3)\n)',
+    doc: 'https://strudel.cc/learn/factories',
+  },
+  {
+    title: 'Generative',
+    summary: 'perlin, degradeBy, sometimes',
+    detail: 'perlin gives smooth random values (Perlin noise). .range(lo,hi) maps it. .degradeBy(0.3) randomly drops 30% of events. .sometimes(fn) applies a function ~50% of the time. .sometimesBy(0.2, fn) for 20%.',
+    example: 'note("c3 eb3 g3 bb3 c4 bb3 g3 eb3").sound("sine").gain(perlin.range(0,0.5).slow(2)).room(0.6).degradeBy(0.2)',
+    doc: 'https://strudel.cc/learn/random-modifiers',
+  },
 ]
 
 const RANDOM_PATTERNS = [
@@ -47,11 +107,24 @@ const SLASH_COMMANDS: SlashCommand[] = [
   { name: '/stop', description: 'Stop playback', action: 'stop' },
   { name: '/record', description: 'Start/stop WAV recording', action: 'record' },
   { name: '/random', description: 'Load a random pattern', action: 'random' },
-  { name: '/help', description: 'Show Strudel learning hints', action: 'help' },
+  { name: '/help', description: 'Open Learn Strudel docs', action: 'help' },
   { name: '/clear', description: 'Clear chat history', action: 'clear' },
 ]
 
+// Prevent infinite recursion if our app loads inside its own iframe
+const isEmbedded = window.self !== window.top
+
+function EmbedGuard() {
+  return (
+    <div className="h-screen flex items-center justify-center bg-neutral-950 text-neutral-500 text-sm">
+      Loading Strudel REPL...
+    </div>
+  )
+}
+
 export default function App() {
+  if (isEmbedded) return <EmbedGuard />
+
   const [mode, setMode] = useState<Mode>('copilot')
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState('')
@@ -62,10 +135,11 @@ export default function App() {
   const [hasStarted, setHasStarted] = useState(false)
   const [showSettings, setShowSettings] = useState(false)
   const [apiKeyInput, setApiKeyInput] = useState('')
-  const [strudelToolbar, setStrudelToolbar] = useState(false)
   const [isRecording, setIsRecording] = useState(false)
   const [recordingTime, setRecordingTime] = useState(0)
-  const [showLearn, setShowLearn] = useState(false)
+  const [sideTab, setSideTab] = useState<SideTab>('chat')
+  const [docsPath, setDocsPath] = useState<string | null>(null)
+  const [expandedHint, setExpandedHint] = useState<number | null>(null)
   const [showSlashMenu, setShowSlashMenu] = useState(false)
   const [slashFilter, setSlashFilter] = useState('')
   const iframeRef = useRef<HTMLIFrameElement>(null)
@@ -79,7 +153,7 @@ export default function App() {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
 
-  // Inject pattern into Strudel iframe
+  // Inject pattern into Strudel iframe via bridge
   const injectPattern = useCallback((code: string) => {
     const iframe = iframeRef.current
     if (!iframe?.contentWindow) return
@@ -87,7 +161,7 @@ export default function App() {
     setCurrentPattern(code)
   }, [])
 
-  // Evaluate (play) the current pattern
+  // Evaluate (play) the current pattern via bridge
   const evaluatePattern = useCallback(() => {
     const iframe = iframeRef.current
     if (!iframe?.contentWindow) return
@@ -95,7 +169,7 @@ export default function App() {
     setIsPlaying(true)
   }, [])
 
-  // Stop playback
+  // Stop playback via bridge
   const stopPlayback = useCallback(() => {
     const iframe = iframeRef.current
     if (!iframe?.contentWindow) return
@@ -103,12 +177,6 @@ export default function App() {
     setIsPlaying(false)
   }, [])
 
-  // Toggle Strudel's native toolbar
-  const toggleStrudelToolbar = useCallback(() => {
-    const next = !strudelToolbar
-    setStrudelToolbar(next)
-    iframeRef.current?.contentWindow?.postMessage({ type: 'strudel-jam:toggle-toolbar', visible: next }, '*')
-  }, [strudelToolbar])
 
   // Recording timer
   useEffect(() => {
@@ -157,12 +225,13 @@ export default function App() {
       case 'random': {
         const pick = RANDOM_PATTERNS[Math.floor(Math.random() * RANDOM_PATTERNS.length)]
         injectPattern(pick.code)
-        setTimeout(() => evaluatePattern(), 300)
+        evaluatePattern()
         setMessages(prev => [...prev, { role: 'assistant', content: `🎲 Loaded "${pick.name}"`, pattern: pick.code }])
         break
       }
       case 'help':
-        setShowLearn(prev => !prev)
+        setSideTab('learn')
+        setDocsPath(null)
         break
       case 'clear':
         setMessages([])
@@ -198,13 +267,7 @@ export default function App() {
         iframeRef.current?.contentWindow?.postMessage({
           type: 'strudel-jam:inject-css',
           css: `
-            #header { display: none !important; }
-            nav[aria-label="Menu Panel"] { transition: transform 0.2s ease, opacity 0.2s ease; }
-            body.strudel-jam-hide-toolbar nav[aria-label="Menu Panel"] {
-              transform: translateY(100%);
-              opacity: 0;
-              pointer-events: none;
-            }
+            .cm-editor .cm-content, .cm-editor .cm-gutters { font-size: 13px !important; line-height: 1.5 !important; }
           `
         }, '*')
         iframeRef.current?.contentWindow?.postMessage({ type: 'strudel-jam:toggle-toolbar', visible: false }, '*')
@@ -212,6 +275,7 @@ export default function App() {
       if (event.data?.type === 'strudel-jam:pattern-updated') setCurrentPattern(event.data.code)
       if (event.data?.type === 'strudel-jam:playing') setIsPlaying(true)
       if (event.data?.type === 'strudel-jam:stopped') setIsPlaying(false)
+      if (event.data?.type === 'strudel-jam:debug') console.log('[strudel-dom]', event.data)
       if (event.data?.type === 'strudel-jam:recording-started') setIsRecording(true)
       if (event.data?.type === 'strudel-jam:record-error') {
         console.error('Recording error:', event.data.error)
@@ -243,11 +307,14 @@ export default function App() {
 
   // Listen for Cowork commands from Tauri backend (local HTTP server)
   useEffect(() => {
-    const unlisten = listen<{ action: string; code?: string; message?: string }>('cowork-command', (event) => {
+    let cancelled = false
+    let unlistenFn: (() => void) | null = null
+
+    listen<{ action: string; code?: string; message?: string }>('cowork-command', (event) => {
       const { action, code, message } = event.payload
       if (action === 'set-pattern' && code) {
         injectPattern(code)
-        setTimeout(() => evaluatePattern(), 300)
+        evaluatePattern()
         setMessages(prev => [...prev, {
           role: 'assistant',
           content: message || 'Here\'s a pattern from Cowork Claude:',
@@ -260,8 +327,16 @@ export default function App() {
       if (action === 'message' && message) {
         setMessages(prev => [...prev, { role: 'assistant', content: message }])
       }
+    }).then(fn => {
+      if (cancelled) { fn() } else { unlistenFn = fn }
+    }).catch(err => {
+      console.warn('Tauri listen not available (running outside Tauri?):', err)
     })
-    return () => { unlisten.then(fn => fn()) }
+
+    return () => {
+      cancelled = true
+      unlistenFn?.()
+    }
   }, [injectPattern, evaluatePattern, stopPlayback])
 
   // Send message to Claude
@@ -296,7 +371,7 @@ export default function App() {
 
       if (pattern) {
         injectPattern(pattern)
-        setTimeout(() => evaluatePattern(), 300)
+        evaluatePattern()
       }
     } catch (e: any) {
       setMessages(prev => [...prev, {
@@ -400,45 +475,39 @@ export default function App() {
         <div className="flex-1 min-w-0">
           <iframe
             ref={iframeRef}
-            src="http://localhost:4321/"
+            src="/strudel/"
             className="w-full h-full border-none"
             allow="autoplay; midi; microphone"
           />
         </div>
 
         {/* Side panel */}
-        <div className="w-80 flex flex-col border-l border-neutral-800 bg-neutral-900/80">
-          {/* Panel header */}
-          <div className="flex items-center gap-2 p-3 border-b border-neutral-800">
-            {isAuthenticated ? (
-              <>
-                <button
-                  onClick={() => setMode('copilot')}
-                  className={`flex-1 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-                    mode === 'copilot'
-                      ? 'bg-amber-600 text-white'
-                      : 'bg-neutral-800 text-neutral-400 hover:text-white'
-                  }`}
-                >
-                  Co-pilot
-                </button>
-                <button
-                  onClick={() => setMode('autopilot')}
-                  className={`flex-1 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-                    mode === 'autopilot'
-                      ? 'bg-purple-600 text-white'
-                      : 'bg-neutral-800 text-neutral-400 hover:text-white'
-                  }`}
-                >
-                  Autopilot
-                </button>
-              </>
-            ) : (
-              <span className="flex-1 text-xs font-medium text-neutral-500 uppercase tracking-wider">Strudel Jam</span>
-            )}
+        <div className="w-96 flex flex-col border-l border-neutral-800 bg-neutral-900">
+          {/* Tab bar: Chat / Learn */}
+          <div className="flex items-center border-b border-neutral-800">
+            <button
+              onClick={() => { setSideTab('chat'); setDocsPath(null) }}
+              className={`flex-1 py-2.5 text-xs font-medium transition-colors ${
+                sideTab === 'chat'
+                  ? 'text-white border-b-2 border-amber-500'
+                  : 'text-neutral-500 hover:text-neutral-300'
+              }`}
+            >
+              Chat
+            </button>
+            <button
+              onClick={() => setSideTab('learn')}
+              className={`flex-1 py-2.5 text-xs font-medium transition-colors ${
+                sideTab === 'learn'
+                  ? 'text-white border-b-2 border-amber-500'
+                  : 'text-neutral-500 hover:text-neutral-300'
+              }`}
+            >
+              Learn Strudel
+            </button>
             <button
               onClick={() => { setApiKeyInput(apiKey); setShowSettings(true) }}
-              className="p-1.5 text-neutral-600 hover:text-white transition-colors rounded-md hover:bg-neutral-800"
+              className="p-2 text-neutral-600 hover:text-white transition-colors"
               title="Settings"
             >
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -447,175 +516,316 @@ export default function App() {
             </button>
           </div>
 
-          {/* Panel content */}
-          <div className="flex-1 overflow-y-auto p-4 space-y-3">
+          {/* Mode toggle (only in chat tab when authenticated) */}
+          {sideTab === 'chat' && isAuthenticated && (
+            <div className="flex items-center gap-2 p-2 border-b border-neutral-800">
+              <button
+                onClick={() => setMode('copilot')}
+                className={`flex-1 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                  mode === 'copilot'
+                    ? 'bg-amber-600 text-white'
+                    : 'bg-neutral-800 text-neutral-400 hover:text-white'
+                }`}
+              >
+                Co-pilot
+              </button>
+              <button
+                onClick={() => setMode('autopilot')}
+                className={`flex-1 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                  mode === 'autopilot'
+                    ? 'bg-purple-600 text-white'
+                    : 'bg-neutral-800 text-neutral-400 hover:text-white'
+                }`}
+              >
+                Autopilot
+              </button>
+            </div>
+          )}
 
-            {/* ── Not connected: show tips + CTA ── */}
-            {!isAuthenticated && (
-              <>
-                <div className="space-y-2 mb-4">
-                  <p className="text-xs text-neutral-500 uppercase tracking-wider font-medium">Try a pattern</p>
-                  {STRUDEL_TIPS.map((tip, i) => (
-                    <button
-                      key={i}
-                      onClick={() => { injectPattern(tip.code); setTimeout(() => evaluatePattern(), 300) }}
-                      className="w-full text-left bg-neutral-800/60 hover:bg-neutral-800 rounded-lg p-3 transition-colors group"
-                    >
-                      <span className="text-xs font-medium text-neutral-300 group-hover:text-white">{tip.label}</span>
-                      <code className="block text-[10px] text-neutral-500 mt-1 truncate">{tip.code}</code>
-                    </button>
-                  ))}
-                </div>
-
-                <div className="border border-neutral-800 rounded-lg p-4 text-center">
-                  <p className="text-xs text-neutral-400 mb-3">
-                    Connect Claude AI to generate patterns, get suggestions, and let AI jam with you
-                  </p>
-                  <button
-                    onClick={() => { setApiKeyInput(apiKey); setShowSettings(true) }}
-                    className="bg-amber-600/90 hover:bg-amber-500 text-white text-xs font-medium px-4 py-2 rounded-lg transition-colors"
-                  >
-                    Add API key
-                  </button>
-                </div>
-              </>
-            )}
-
-            {/* ── Connected: empty state ── */}
-            {isAuthenticated && messages.length === 0 && (
-              <div className="text-center text-neutral-500 mt-8 px-2">
-                {mode === 'copilot' ? (
+          {/* ── Chat tab content ── */}
+          {sideTab === 'chat' && (
+            <>
+              <div className="flex-1 overflow-y-auto p-4 space-y-3">
+                {/* ── Not connected: show tips + CTA ── */}
+                {!isAuthenticated && (
                   <>
-                    <p className="text-sm text-neutral-300 mb-2">What should we play?</p>
-                    <div className="space-y-1.5 text-xs text-neutral-500">
-                      {['"dark ambient in F minor"', '"add a walking bass"', '"make it more glitchy"', '"something chill with piano"'].map((s, i) => (
-                        <button key={i} onClick={() => { setInput(s.replace(/"/g, '')); }} className="block w-full text-left px-3 py-1.5 rounded-md hover:bg-neutral-800 hover:text-neutral-300 transition-colors">
-                          {s}
+                    <div className="space-y-2 mb-4">
+                      <p className="text-xs text-neutral-500 uppercase tracking-wider font-medium">Try a pattern</p>
+                      {STRUDEL_TIPS.map((tip, i) => (
+                        <button
+                          key={i}
+                          onClick={() => { injectPattern(tip.code); evaluatePattern() }}
+                          className="w-full text-left bg-neutral-800/60 hover:bg-neutral-800 rounded-lg p-3 transition-colors group"
+                        >
+                          <span className="text-xs font-medium text-neutral-300 group-hover:text-white">{tip.label}</span>
+                          <code className="block text-[10px] text-neutral-500 mt-1 truncate">{tip.code}</code>
                         </button>
                       ))}
                     </div>
-                  </>
-                ) : (
-                  <>
-                    <p className="text-sm text-neutral-300 mb-1">Autopilot mode</p>
-                    <p className="text-xs">Hit start and Claude will create and evolve patterns on its own, every 15 seconds.</p>
+
+                    <div className="border border-neutral-800 rounded-lg p-4 text-center">
+                      <p className="text-xs text-neutral-400 mb-3">
+                        Connect Claude AI to generate patterns, get suggestions, and let AI jam with you
+                      </p>
+                      <button
+                        onClick={() => { setApiKeyInput(apiKey); setShowSettings(true) }}
+                        className="bg-amber-600/90 hover:bg-amber-500 text-white text-xs font-medium px-4 py-2 rounded-lg transition-colors"
+                      >
+                        Add API key
+                      </button>
+                    </div>
                   </>
                 )}
-              </div>
-            )}
 
-            {/* ── Chat messages ── */}
-            {messages.map((msg, i) => (
-              <div key={i} className={msg.role === 'user' ? 'text-right' : ''}>
-                <div className={`inline-block max-w-[90%] rounded-xl px-3 py-2 text-xs ${
-                  msg.role === 'user'
-                    ? 'bg-amber-600/20 text-amber-200'
-                    : 'bg-neutral-800 text-neutral-200'
-                }`}>
-                  {msg.pattern ? (
-                    <div>
-                      <p className="mb-1.5">{msg.content.replace(/```[\s\S]*?```/g, '').trim()}</p>
-                      <pre className="bg-neutral-950 rounded-md p-2 text-[10px] overflow-x-auto text-green-400">
-                        <code>{msg.pattern}</code>
-                      </pre>
-                    </div>
-                  ) : (
-                    <p className="whitespace-pre-wrap">{msg.content}</p>
-                  )}
-                </div>
-              </div>
-            ))}
-
-            {isLoading && (
-              <div className="flex gap-1 text-amber-500 text-xs">
-                <span className="animate-pulse">●</span>
-                <span className="animate-pulse" style={{ animationDelay: '0.2s' }}>●</span>
-                <span className="animate-pulse" style={{ animationDelay: '0.4s' }}>●</span>
-              </div>
-            )}
-            <div ref={chatEndRef} />
-          </div>
-
-          {/* Panel footer / input */}
-          <div className="p-3 border-t border-neutral-800">
-            {!isAuthenticated ? (
-              <div className="text-center">
-                <p className="text-[10px] text-neutral-600">
-                  Click patterns above to try them, or edit code directly on the left
-                </p>
-              </div>
-            ) : mode === 'copilot' ? (
-              <div className="relative">
-                {/* Slash command autocomplete */}
-                {showSlashMenu && filteredCommands.length > 0 && (
-                  <div className="absolute bottom-full left-0 right-0 mb-1 bg-neutral-800 border border-neutral-700 rounded-lg overflow-hidden shadow-xl z-10">
-                    {filteredCommands.map((cmd, i) => (
-                      <button
-                        key={cmd.action}
-                        onClick={() => handleSlashCommand(cmd.action)}
-                        className={`w-full text-left px-3 py-2 text-xs flex items-center gap-3 hover:bg-neutral-700 transition-colors ${
-                          i === 0 ? 'bg-neutral-700/50' : ''
-                        }`}
-                      >
-                        <span className="text-amber-400 font-mono font-medium">{cmd.name}</span>
-                        <span className="text-neutral-500">{cmd.description}</span>
-                      </button>
-                    ))}
+                {/* ── Connected: empty state ── */}
+                {isAuthenticated && messages.length === 0 && (
+                  <div className="text-center text-neutral-500 mt-8 px-2">
+                    {mode === 'copilot' ? (
+                      <>
+                        <p className="text-sm text-neutral-300 mb-2">What should we play?</p>
+                        <div className="space-y-1.5 text-xs text-neutral-500">
+                          {['"dark ambient in F minor"', '"add a walking bass"', '"make it more glitchy"', '"something chill with piano"'].map((s, i) => (
+                            <button key={i} onClick={() => { setInput(s.replace(/"/g, '')); }} className="block w-full text-left px-3 py-1.5 rounded-md hover:bg-neutral-800 hover:text-neutral-300 transition-colors">
+                              {s}
+                            </button>
+                          ))}
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <p className="text-sm text-neutral-300 mb-1">Autopilot mode</p>
+                        <p className="text-xs">Hit start and Claude will create and evolve patterns on its own, every 15 seconds.</p>
+                      </>
+                    )}
                   </div>
                 )}
-                <div className="flex gap-2">
-                  <input
-                    value={input}
-                    onChange={e => handleInputChange(e.target.value)}
-                    onKeyDown={e => {
-                      if (e.key === 'Enter' && !e.shiftKey) {
-                        e.preventDefault()
-                        if (showSlashMenu && filteredCommands.length > 0) {
-                          // Execute the first matching slash command
-                          handleSlashCommand(filteredCommands[0].action)
-                        } else if (input.startsWith('/')) {
-                          // Unknown slash command, ignore
-                        } else {
-                          sendMessage()
-                        }
-                      }
-                      if (e.key === 'Escape' && showSlashMenu) {
-                        setShowSlashMenu(false)
-                        setSlashFilter('')
+
+                {/* ── Chat messages ── */}
+                {messages.map((msg, i) => (
+                  <div key={i} className={msg.role === 'user' ? 'text-right' : ''}>
+                    <div className={`inline-block max-w-[90%] rounded-xl px-3 py-2 text-xs ${
+                      msg.role === 'user'
+                        ? 'bg-amber-600/20 text-amber-200'
+                        : 'bg-neutral-800 text-neutral-200'
+                    }`}>
+                      {msg.pattern ? (
+                        <div>
+                          <p className="mb-1.5">{msg.content.replace(/```[\s\S]*?```/g, '').trim()}</p>
+                          <pre className="bg-neutral-950 rounded-md p-2 text-[10px] overflow-x-auto text-green-400">
+                            <code>{msg.pattern}</code>
+                          </pre>
+                        </div>
+                      ) : (
+                        <p className="whitespace-pre-wrap">{msg.content}</p>
+                      )}
+                    </div>
+                  </div>
+                ))}
+
+                {isLoading && (
+                  <div className="flex gap-1 text-amber-500 text-xs">
+                    <span className="animate-pulse">●</span>
+                    <span className="animate-pulse" style={{ animationDelay: '0.2s' }}>●</span>
+                    <span className="animate-pulse" style={{ animationDelay: '0.4s' }}>●</span>
+                  </div>
+                )}
+                <div ref={chatEndRef} />
+              </div>
+
+              {/* Panel footer / input */}
+              <div className="p-3 border-t border-neutral-800">
+                {!isAuthenticated ? (
+                  <div className="text-center">
+                    <p className="text-[10px] text-neutral-600">
+                      Click patterns above to try them, or edit code directly on the left
+                    </p>
+                  </div>
+                ) : mode === 'copilot' ? (
+                  <div className="relative">
+                    {/* Slash command autocomplete */}
+                    {showSlashMenu && filteredCommands.length > 0 && (
+                      <div className="absolute bottom-full left-0 right-0 mb-1 bg-neutral-800 border border-neutral-700 rounded-lg overflow-hidden shadow-xl z-10">
+                        {filteredCommands.map((cmd, i) => (
+                          <button
+                            key={cmd.action}
+                            onClick={() => handleSlashCommand(cmd.action)}
+                            className={`w-full text-left px-3 py-2 text-xs flex items-center gap-3 hover:bg-neutral-700 transition-colors ${
+                              i === 0 ? 'bg-neutral-700/50' : ''
+                            }`}
+                          >
+                            <span className="text-amber-400 font-mono font-medium">{cmd.name}</span>
+                            <span className="text-neutral-500">{cmd.description}</span>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                    <div className="flex gap-2">
+                      <input
+                        value={input}
+                        onChange={e => handleInputChange(e.target.value)}
+                        onKeyDown={e => {
+                          if (e.key === 'Enter' && !e.shiftKey) {
+                            e.preventDefault()
+                            if (showSlashMenu && filteredCommands.length > 0) {
+                              handleSlashCommand(filteredCommands[0].action)
+                            } else if (input.startsWith('/')) {
+                              // Unknown slash command, ignore
+                            } else {
+                              sendMessage()
+                            }
+                          }
+                          if (e.key === 'Escape' && showSlashMenu) {
+                            setShowSlashMenu(false)
+                            setSlashFilter('')
+                          }
+                        }}
+                        placeholder="describe what to play... (/ for commands)"
+                        disabled={isLoading}
+                        className="flex-1 bg-neutral-800 border border-neutral-700 rounded-lg px-3 py-2 text-xs text-white placeholder-neutral-500 focus:outline-none focus:border-amber-500 disabled:opacity-50"
+                      />
+                      <button
+                        onClick={() => sendMessage()}
+                        disabled={isLoading || !input.trim() || input.startsWith('/')}
+                        className="bg-amber-600 hover:bg-amber-500 disabled:bg-neutral-700 disabled:text-neutral-500 text-white px-3 py-2 rounded-lg text-xs font-medium transition-colors"
+                      >
+                        Send
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => {
+                      if (isPlaying) {
+                        stopPlayback()
+                      } else {
+                        sendMessage('Start jamming! Create something interesting.')
                       }
                     }}
-                    placeholder="describe what to play... (/ for commands)"
-                    disabled={isLoading}
-                    className="flex-1 bg-neutral-800 border border-neutral-700 rounded-lg px-3 py-2 text-xs text-white placeholder-neutral-500 focus:outline-none focus:border-amber-500 disabled:opacity-50"
-                  />
-                  <button
-                    onClick={() => sendMessage()}
-                    disabled={isLoading || !input.trim() || input.startsWith('/')}
-                    className="bg-amber-600 hover:bg-amber-500 disabled:bg-neutral-700 disabled:text-neutral-500 text-white px-3 py-2 rounded-lg text-xs font-medium transition-colors"
+                    className={`w-full py-2.5 rounded-lg text-sm font-medium transition-colors ${
+                      isPlaying
+                        ? 'bg-red-600/90 hover:bg-red-500 text-white'
+                        : 'bg-purple-600/90 hover:bg-purple-500 text-white'
+                    }`}
                   >
-                    Send
+                    {isPlaying ? 'Stop Autopilot' : 'Start Autopilot'}
                   </button>
+                )}
+              </div>
+            </>
+          )}
+
+          {/* ── Learn tab content ── */}
+          {sideTab === 'learn' && (
+            docsPath ? (
+              <div className="flex-1 flex flex-col min-h-0">
+                <div className="flex items-center gap-2 px-3 py-2 border-b border-neutral-800">
+                  <button
+                    onClick={() => setDocsPath(null)}
+                    className="text-neutral-400 hover:text-white transition-colors text-xs flex items-center gap-1"
+                  >
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <polyline points="15 18 9 12 15 6"/>
+                    </svg>
+                    Back
+                  </button>
+                  <span className="text-xs text-neutral-500 truncate">
+                    {STRUDEL_DOCS.find(d => d.path === docsPath)?.title}
+                  </span>
+                </div>
+                <div className="flex-1 relative overflow-hidden">
+                  <iframe
+                    src={docsPath}
+                    className="absolute inset-0 border-none bg-neutral-950"
+                    style={{ width: '125%', height: '125%', transform: 'scale(0.8)', transformOrigin: 'top left' }}
+                  />
                 </div>
               </div>
             ) : (
-              <button
-                onClick={() => {
-                  if (isPlaying) {
-                    stopPlayback()
-                  } else {
-                    sendMessage('Start jamming! Create something interesting.')
-                  }
-                }}
-                className={`w-full py-2.5 rounded-lg text-sm font-medium transition-colors ${
-                  isPlaying
-                    ? 'bg-red-600/90 hover:bg-red-500 text-white'
-                    : 'bg-purple-600/90 hover:bg-purple-500 text-white'
-                }`}
-              >
-                {isPlaying ? 'Stop Autopilot' : 'Start Autopilot'}
-              </button>
-            )}
-          </div>
+              <div className="flex-1 overflow-y-auto">
+                {/* Quick reference cards */}
+                <div className="p-3">
+                  <p className="text-[10px] text-neutral-500 uppercase tracking-wider font-medium mb-2">Quick Reference</p>
+                  <div className="space-y-1.5">
+                    {STRUDEL_LEARN.map((item, i) => (
+                      <button
+                        key={i}
+                        onClick={() => setExpandedHint(expandedHint === i ? null : i)}
+                        className={`w-full text-left rounded-lg p-2.5 transition-colors ${
+                          expandedHint === i
+                            ? 'bg-amber-900/30 ring-1 ring-amber-700/50'
+                            : 'bg-neutral-800/60 hover:bg-neutral-800'
+                        }`}
+                      >
+                        <span className="text-[11px] font-medium text-neutral-200">{item.title}</span>
+                        <span className="text-[10px] text-neutral-500 ml-1.5">{item.summary}</span>
+                        {expandedHint === i && (
+                          <div className="mt-2 space-y-2">
+                            <p className="text-[11px] text-neutral-300 leading-relaxed">{item.detail}</p>
+                            <div
+                              className="bg-neutral-950 rounded-md p-2 cursor-pointer hover:ring-1 hover:ring-amber-600/50 transition-all group"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                injectPattern(item.example)
+                                evaluatePattern()
+                              }}
+                            >
+                              <div className="flex items-center justify-between mb-1">
+                                <span className="text-[9px] text-neutral-600 uppercase tracking-wider">Example</span>
+                                <span className="text-[9px] text-amber-500/70 opacity-0 group-hover:opacity-100 transition-opacity">click to play</span>
+                              </div>
+                              <pre className="text-[10px] text-green-400 overflow-x-auto whitespace-pre-wrap"><code>{item.example}</code></pre>
+                            </div>
+                            <span
+                              className="inline-block text-[10px] text-amber-500/80 hover:text-amber-400 underline underline-offset-2 cursor-pointer"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                setDocsPath(item.doc)
+                              }}
+                            >
+                              Read the full docs →
+                            </span>
+                          </div>
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Full documentation pages */}
+                <div className="p-3 pt-0">
+                  <p className="text-[10px] text-neutral-500 uppercase tracking-wider font-medium mb-2">Documentation</p>
+                  <div className="space-y-0.5">
+                    {STRUDEL_DOCS.map((doc) => (
+                      <button
+                        key={doc.path}
+                        onClick={() => setDocsPath(doc.path)}
+                        className="w-full text-left flex items-center gap-2.5 px-2.5 py-2 rounded-lg hover:bg-neutral-800 transition-colors group"
+                      >
+                        <span className="text-sm">{doc.icon}</span>
+                        <span className="text-xs text-neutral-400 group-hover:text-white transition-colors">{doc.title}</span>
+                        <svg className="ml-auto w-3 h-3 text-neutral-700 group-hover:text-neutral-400 transition-colors" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <polyline points="9 18 15 12 9 6"/>
+                        </svg>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Open Getting Started in doc viewer */}
+                <div className="p-3 pt-1 border-t border-neutral-800 mt-1">
+                  <button
+                    onClick={() => setDocsPath('https://strudel.cc/learn/getting-started')}
+                    className="flex items-center gap-2 text-xs text-neutral-500 hover:text-amber-400 transition-colors"
+                  >
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
+                    </svg>
+                    Start from the beginning
+                  </button>
+                </div>
+              </div>
+            )
+          )}
         </div>
       </div>
 
@@ -676,48 +886,19 @@ export default function App() {
 
         {/* Learn button */}
         <button
-          onClick={() => setShowLearn(prev => !prev)}
+          onClick={() => { setSideTab('learn'); setDocsPath(null) }}
           className={`p-1.5 rounded transition-colors text-xs ${
-            showLearn ? 'text-amber-400 bg-amber-900/30' : 'text-neutral-600 hover:text-neutral-300'
+            sideTab === 'learn' ? 'text-amber-400 bg-amber-900/30' : 'text-neutral-600 hover:text-neutral-300'
           }`}
-          title="Strudel learning hints"
+          title="Learn Strudel"
         >
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/>
           </svg>
         </button>
 
-        {/* Strudel toolbar toggle */}
-        <button
-          onClick={toggleStrudelToolbar}
-          className={`p-1.5 rounded transition-colors ${
-            strudelToolbar ? 'text-amber-400' : 'text-neutral-600 hover:text-neutral-300'
-          }`}
-          title="Strudel controls"
-        >
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M12 20v-6M6 20V10M18 20V4"/>
-          </svg>
-        </button>
       </div>
 
-      {/* Learn panel - collapsible */}
-      {showLearn && (
-        <div className="border-t border-neutral-800 bg-neutral-900/95 px-4 py-3 max-h-48 overflow-y-auto">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-medium text-amber-400 uppercase tracking-wider">Strudel Quick Reference</span>
-            <button onClick={() => setShowLearn(false)} className="text-neutral-600 hover:text-neutral-300 text-xs">✕</button>
-          </div>
-          <div className="grid grid-cols-2 lg:grid-cols-3 gap-2">
-            {STRUDEL_LEARN.map((item, i) => (
-              <div key={i} className="bg-neutral-800/60 rounded-lg p-2.5">
-                <span className="text-[11px] font-medium text-neutral-200 block mb-1">{item.title}</span>
-                <span className="text-[10px] text-neutral-500 leading-relaxed">{item.hint}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
     </div>
   )
 }
