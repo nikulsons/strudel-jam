@@ -17,17 +17,21 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
 
       - name: Clone and build Strudel REPL
         run: |
           cd ..
           git clone --depth 1 https://codeberg.org/uzu/strudel.git
           cd strudel
-          npm install
-          npm run jsdoc-json
+          pnpm install
+          pnpm run jsdoc-json
           cd website
-          BASE_PATH="/strudel" npm run build
+          BASE_PATH="/strudel" pnpm run build
           cd ../../strudel-jam
           mkdir -p public/strudel
           cp -r ../strudel/website/dist/* public/strudel/
@@ -67,7 +71,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
 
       - name: Install Rust stable
         uses: dtolnay/rust-toolchain@stable
